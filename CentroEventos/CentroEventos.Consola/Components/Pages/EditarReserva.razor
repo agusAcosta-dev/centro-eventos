@@ -1,0 +1,111 @@
+@page "/reserva/{Id:int?}"
+@using CentroEventos.Aplicacion.UseCases.Reserva.UseCases
+@using CentroEventos.Aplicacion.UseCases.ReservaUseCases
+@using Microsoft.AspNetCore.Components.Forms
+
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject ReservaAltaUseCase reservaAltaUseCase
+@inject ReservaModificarUseCase reservaModificarUseCase
+@inject ReservaDevolverUseCase reservaDevolverUseCase
+@inject PersonaDevolverUseCase personaDevolverUseCase
+@inject UsuarioActual usuarioActual
+
+@if (_esNuevoReserva) {
+    <h3>Agregando una nueva reserva</h3>
+}
+else {
+    <h3>Modificando Reserva</h3>
+    }
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+@try {
+<div class="mb-3">
+  <label class="form-label">ID Evento Deportivo</label>
+  <InputNumber @bind-Value="_reserva.EventoDeportivoId" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">DNI Cliente</label>
+  <input @bind="dni" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Estado de la reserva</label>
+  <InputSelect @bind-Value="_reserva.EstadoAsistencia" class="form-select">
+    @foreach (var estado in Enum.GetValues<Estado>())
+    {
+      <option value="@estado">@estado.ToString()</option>
+    }
+  </InputSelect>
+</div>
+<button class="btn btn-primary" @onclick="Aceptar">Aceptar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+}catch(Exception e) {
+    error = e.Message;
+    fallo = true;
+}
+@code {
+    private Reserva _reserva = new Reserva();
+    [Parameter] public int? Id { get; set; }
+    bool _esNuevoReserva = true;
+    string? dni;
+    private string? error;
+    private bool fallo = false;
+    protected override void OnParametersSet() {
+        try {
+            if(Id != null) {
+                var reserva_hallado = reservaDevolverUseCase.Ejecutar(Id.Value);
+                if (reserva_hallado != null) {
+                    _reserva = reserva_hallado;
+                    dni = personaDevolverUseCase.Ejecutar(_reserva.PersonaId).DNI;
+                    _esNuevoReserva = false;
+                    }
+                }
+            }
+        catch(EntidadNotFoundException) {
+            error = "No se encontró la persona con el DNI especificado.";
+            fallo = true;
+        }
+        catch(Exception ex) {
+            fallo = true;
+            error = ex.Message;
+        }
+    }
+    void Aceptar()
+    {
+        try {
+            _reserva.FechaAltaReserva = DateTime.Now;
+            if (_esNuevoReserva)
+            {
+                _reserva.PersonaId = personaDevolverUseCase.Ejecutar(dni!).Id;
+                reservaAltaUseCase.Ejecutar(_reserva,usuarioActual.Id);
+            }
+            else
+            {
+                Persona personaAux = personaDevolverUseCase.Ejecutar(_reserva.PersonaId);
+                if (dni != personaAux.DNI) {
+                _reserva.PersonaId = personaAux.Id;
+                }
+                reservaModificarUseCase.Ejecutar(_reserva,usuarioActual.Id);
+            }
+            _reserva = new Reserva();
+            Navegador.NavigateTo("listadoreservas");
+        }
+        catch(EntidadNotFoundException) {
+            error = "No existe la persona o el evento.";
+            fallo = true;
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/inicio");
+    }
+
+}

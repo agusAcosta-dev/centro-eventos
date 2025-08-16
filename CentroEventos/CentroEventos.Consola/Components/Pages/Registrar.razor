@@ -1,0 +1,84 @@
+@page "/registrar"
+@using CentroEventos.Aplicacion.UseCases.UsuarioUseCases
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject UsuarioAltaUseCase usuarioAltaUseCase
+@inject UsuarioDevolverUseCase usuarioDevolverUseCase
+@inject UsuarioModificarUseCase usuarioModificarUseCase
+@inject UsuarioActual usuarioActual
+@inject Hasher hasher;
+
+<h3>Registrar</h3>
+
+@if (fallo)
+{
+    <div class="alert alert-danger">@mensajeError</div>
+}
+
+<div class="mb-3">
+  <label class="form-label">Nombre</label>
+  <input @bind="_usuario.Nombre" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Apellido</label>
+  <input @bind="_usuario.Apellido" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Email</label>
+  <input @bind="_usuario.Email" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Contraseña</label>
+  <input @bind="rawContrasena" type="password" class="form-control" />
+</div>
+<button class="btn btn-primary" @onclick="Aceptar">Registrar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+
+@code {
+    private Usuario _usuario = new Usuario();
+    private string rawContrasena = "";
+    private bool esPrimerUsuario = false;
+    [Parameter] public int? Id { get; set; }
+    private string? mensajeError;
+    private bool fallo = false;
+    void Aceptar()
+    {
+        try {
+            var admin = usuarioDevolverUseCase.Ejecutar(1);
+        }
+        catch(EntidadNotFoundException) {
+            esPrimerUsuario = true;
+        }
+        try {
+            if(esPrimerUsuario) {
+                Permiso todos = (Permiso.EventoAlta
+                           | Permiso.EventoBaja
+                           | Permiso.EventoModificacion
+                           | Permiso.ReservaAlta
+                           | Permiso.ReservaBaja
+                           | Permiso.ReservaModificacion
+                           | Permiso.PersonaAlta
+                           | Permiso.PersonaBaja
+                           | Permiso.PersonaModificacion
+                           | Permiso.UsuarioBaja
+                           | Permiso.UsuarioModificacion);
+            _usuario.SetPermisos(todos);
+            }
+            _usuario.Contrasena = Hasher.Sha265(rawContrasena);
+            usuarioAltaUseCase.Ejecutar(_usuario);
+            usuarioActual.Id = _usuario.Id;
+            Navegador.NavigateTo("/inicio");
+        }
+        catch(Exception e) {
+            mensajeError = e.Message;
+            fallo = true;
+        }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/");
+    }
+}

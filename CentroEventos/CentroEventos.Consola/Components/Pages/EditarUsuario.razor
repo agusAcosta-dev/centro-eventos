@@ -1,0 +1,206 @@
+@page "/usuario/{Id:int?}"
+@using CentroEventos.Aplicacion.UseCases.UsuarioUseCases
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject UsuarioAltaUseCase usuarioAltaUseCase
+@inject UsuarioDevolverUseCase usuarioDevolverUseCase
+@inject UsuarioModificarUseCase usuarioModificarUseCase
+@inject UsuarioActual usuarioActual
+@inject IServicioAutorizacion autorizacion
+
+@if(fallo) {
+  <div class="alert alert-danger">
+        @permisoError
+    </div>
+}
+
+<h3>Modificando Usuario</h3>
+<div class="mb-3">
+  <label class="form-label">Nombre</label>
+  <input @bind="_usuario.Nombre" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Apellido</label>
+  <input @bind="_usuario.Apellido" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Email</label>
+  <input @bind="_usuario.Email" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Contraseña</label>
+  <input @bind="rawContrasena" class="form-control" />
+</div>
+
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id, Permiso.UsuarioModificacion)) {
+  <h5>Permisos</h5>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permEventoAlta" class="form-check-input" id="permEventoAlta" />
+    <label class="form-check-label" for="permEventoAlta">Evento Alta</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permEventoModificacion" class="form-check-input" id="permEventoModificacion" />
+    <label class="form-check-label" for="permEventoModificacion">Evento Modificación</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permEventoBaja" class="form-check-input" id="permEventoBaja" />
+    <label class="form-check-label" for="permEventoBaja">Evento Baja</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permReservaAlta" class="form-check-input" id="permReservaAlta" />
+    <label class="form-check-label" for="permReservaAlta">Reserva Alta</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permReservaModificacion" class="form-check-input" id="permReservaModificacion" />
+    <label class="form-check-label" for="permReservaModificacion">Reserva Modificación</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permReservaBaja" class="form-check-input" id="permReservaBaja" />
+    <label class="form-check-label" for="permReservaBaja">Reserva Baja</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permUsuarioBaja" class="form-check-input" id="permUsuarioBaja" />
+    <label class="form-check-label" for="permUsuarioBaja">Usuario Baja</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permUsuarioModificacion" class="form-check-input" id="permUsuarioModificacion" />
+    <label class="form-check-label" for="permUsuarioModificacion">Usuario Modificación</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permPersonaAlta" class="form-check-input" id="permPersonaAlta" />
+    <label class="form-check-label" for="permPersonaAlta">Persona Alta</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permPersonaBaja" class="form-check-input" id="permPersonaBaja" />
+    <label class="form-check-label" for="permPersonaBaja">Persona Baja</label>
+  </div>
+  <div class="form-check">
+    <InputCheckbox @bind-Value="permPersonaModificacion" class="form-check-input" id="permPersonaModificacion" />
+    <label class="form-check-label" for="permPersonaModificacion">Persona Modificación</label>
+  </div>
+}
+<button class="btn btn-primary" @onclick="Aceptar">Aceptar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+
+@code {
+    private Usuario _usuario = new Usuario();
+    private string rawContrasena = "";
+    [Parameter] public int? Id { get; set; }
+    private string? permisoError;
+    bool fallo = false;
+    private bool permEventoAlta;
+    private bool permEventoModificacion;
+    private bool permEventoBaja;
+    private bool permReservaAlta;
+    private bool permReservaModificacion;
+    private bool permReservaBaja;
+    private bool permUsuarioBaja;
+    private bool permUsuarioModificacion;
+    private bool permPersonaAlta;
+    private bool permPersonaBaja;
+    private bool permPersonaModificacion;
+    
+    protected override void OnParametersSet() {
+        try {
+            if(Id != null) {
+                var usu_hallado = usuarioDevolverUseCase.Ejecutar(Id.Value);
+                if (usu_hallado != null) {
+                    _usuario = usu_hallado;
+                    permEventoAlta = _usuario.Permisos.HasFlag(Permiso.EventoAlta);
+                    permEventoModificacion = _usuario.Permisos.HasFlag(Permiso.EventoModificacion);
+                    permEventoBaja = _usuario.Permisos.HasFlag(Permiso.EventoBaja);
+                    permReservaAlta = _usuario.Permisos.HasFlag(Permiso.ReservaAlta);
+                    permReservaModificacion = _usuario.Permisos.HasFlag(Permiso.ReservaModificacion);
+                    permReservaBaja = _usuario.Permisos.HasFlag(Permiso.ReservaBaja);
+                    permUsuarioBaja = _usuario.Permisos.HasFlag(Permiso.UsuarioBaja);
+                    permUsuarioModificacion = _usuario.Permisos.HasFlag(Permiso.UsuarioModificacion);
+                    permPersonaAlta = _usuario.Permisos.HasFlag(Permiso.PersonaAlta);
+                    permPersonaBaja = _usuario.Permisos.HasFlag(Permiso.PersonaBaja);
+                    permPersonaModificacion = _usuario.Permisos.HasFlag(Permiso.PersonaModificacion);
+                }
+            }
+        }
+        catch(Exception ex) {
+            permisoError = ex.Message;
+            fallo = true;
+        }
+    }
+    
+    void Aceptar()
+    {
+        try {
+        if(!String.IsNullOrWhiteSpace(rawContrasena)) {
+            _usuario.Contrasena = Hasher.Sha265(rawContrasena);
+        }
+        if (permEventoAlta)  
+            _usuario.Permisos |= Permiso.EventoAlta;
+        else 
+            _usuario.Permisos &= ~Permiso.EventoAlta;
+            
+        if (permEventoModificacion)  
+            _usuario.Permisos |= Permiso.EventoModificacion;
+        else 
+            _usuario.Permisos &= ~Permiso.EventoModificacion;
+            
+        if (permEventoBaja)  
+            _usuario.Permisos |= Permiso.EventoBaja;
+        else 
+            _usuario.Permisos &= ~Permiso.EventoBaja;
+            
+        if (permReservaAlta)  
+            _usuario.Permisos |= Permiso.ReservaAlta;
+        else 
+            _usuario.Permisos &= ~Permiso.ReservaAlta;
+            
+        if (permReservaModificacion)  
+            _usuario.Permisos |= Permiso.ReservaModificacion;
+        else 
+            _usuario.Permisos &= ~Permiso.ReservaModificacion;
+            
+        if (permReservaBaja)  
+            _usuario.Permisos |= Permiso.ReservaBaja;
+        else 
+            _usuario.Permisos &= ~Permiso.ReservaBaja;
+            
+        if (permUsuarioBaja)  
+            _usuario.Permisos |= Permiso.UsuarioBaja;
+        else 
+            _usuario.Permisos &= ~Permiso.UsuarioBaja;
+            
+        if (permUsuarioModificacion)  
+            _usuario.Permisos |= Permiso.UsuarioModificacion;
+        else 
+            _usuario.Permisos &= ~Permiso.UsuarioModificacion;
+            
+        if (permPersonaAlta)  
+            _usuario.Permisos |= Permiso.PersonaAlta;
+        else 
+            _usuario.Permisos &= ~Permiso.PersonaAlta;
+            
+        if (permPersonaBaja)  
+            _usuario.Permisos |= Permiso.PersonaBaja;
+        else 
+            _usuario.Permisos &= ~Permiso.PersonaBaja;
+            
+        if (permPersonaModificacion)  
+            _usuario.Permisos |= Permiso.PersonaModificacion;
+        else 
+            _usuario.Permisos &= ~Permiso.PersonaModificacion;
+        
+        usuarioModificarUseCase.Ejecutar(_usuario,usuarioActual.Id);
+        _usuario = new Usuario();
+        Navegador.NavigateTo("listadousuarios");
+        }
+        catch(Exception ex) {
+            permisoError = ex.Message;
+            fallo = true;
+        }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/inicio");
+    }
+}

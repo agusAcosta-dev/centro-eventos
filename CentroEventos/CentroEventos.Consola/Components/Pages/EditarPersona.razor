@@ -1,0 +1,87 @@
+@page "/persona/{Id:int?}"
+@using CentroEventos.Aplicacion.UseCases.PersonaUseCases
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject PersonaAltaUseCase personaAltaUseCase
+@inject PersonaDevolverUseCase personaDevolverUseCase
+@inject PersonaModificarUseCase personaModificarUseCase
+@inject UsuarioActual usuarioActual
+@inject IServicioAutorizacion autorizacion
+
+@if(fallo) {
+  <div class="alert alert-danger">
+        @permisoError
+    </div>
+}
+@if (_esNuevoPersona) {
+    <h3>Creando Persona</h3>
+}
+else {
+    <h3>Modificando Persona</h3>
+    }
+  <div class="mb-3">
+  <label class="form-label">Nombre</label>
+  <input @bind="_persona.Nombre" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Apellido</label>
+  <input @bind="_persona.Apellido" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">DNI</label>
+  <input @bind="_persona.DNI" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Teléfono</label>
+  <input @bind="_persona.Telefono" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Email</label>
+  <input @bind="_persona.Email" class="form-control" />
+</div>
+
+<button class="btn btn-primary" @onclick="Aceptar">Aceptar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+@code {
+    private Persona _persona = new Persona();
+    [Parameter] public int? Id { get; set; }
+    bool _esNuevoPersona = true;
+    private string? permisoError;
+    bool fallo = false;
+    protected override void OnParametersSet() {
+      try {
+        if(Id != null) {
+            var per_hallado = personaDevolverUseCase.Ejecutar(Id.Value);
+            if(per_hallado != null) {
+              _esNuevoPersona = false;
+              _persona = per_hallado;
+            }
+          }
+        }
+      catch(Exception ex) {
+        permisoError = ex.Message;
+        fallo = true;
+      }
+    }
+    void Aceptar()
+    {
+      try {
+        if(Id != null) {
+          personaModificarUseCase.Ejecutar(_persona, usuarioActual.Id);
+        }
+        else {
+          personaAltaUseCase.Ejecutar(_persona, usuarioActual.Id);
+        }
+        _persona = new Persona();
+        Navegador.NavigateTo("listadopersonas");
+        }
+      catch(Exception ex) {
+        permisoError = ex.Message;
+        fallo = true;
+      }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/inicio");
+    }
+}

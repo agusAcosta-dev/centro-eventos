@@ -1,0 +1,98 @@
+@page "/listadopersonas"
+@using CentroEventos.Aplicacion.UseCases.PersonaUseCases
+@rendermode InteractiveServer
+@inject ListarPersonaUseCase ListarPersonaUseCase
+@inject PersonaBajaUseCase personaBajaUseCase
+@inject UsuarioActual usuarioActual
+@inject NavigationManager Navegador
+@inject IServicioAutorizacion autorizacion
+<button class="btn btn-primary" @onclick="()=>Inicio()">
+        Inicio
+</button>
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+<DialogoConfirmacion @ref="dialogo" OnConfirmado="Eliminar"/>
+<table class="table">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>NOMBRE</th>
+ <th>APELLIDO</th>
+ <th>DNI</th>
+ <th>EMAIL</th>
+ <th>TELEFONO</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var per in _lista)
+ {
+ <tr>
+ <td>@per.Id</td>
+ <td>@per.Nombre</td>
+ <td>@per.Apellido</td>
+ <td>@per.DNI</td>
+ <td>@per.Email</td>
+ <td>@per.Telefono</td>
+ <td>
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.PersonaModificacion)) {
+    <button class="btn btn-primary" @onclick="()=>ModificarPersona(per)">
+        Editar
+    </button>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.PersonaBaja)) {
+    <button class="btn btn-danger" @onclick="()=>ConfirmarEliminacion(per)">
+        Eliminar
+    </button>
+}
+ </td>
+ </tr>
+ }
+ </tbody>
+</table>
+
+@code {
+    List<Persona> _lista = new List<Persona>();
+    DialogoConfirmacion dialogo = null!;
+    Persona? _personaParaEliminar = null;
+    string? error;
+    bool fallo = false;
+    protected override void OnInitialized() {
+        try {
+        _lista = ListarPersonaUseCase.Ejecutar();
+        }
+        catch(Exception e) {
+            error = e.Message;
+            fallo = true;
+        }
+    }
+    private void Inicio() {
+        Navegador.NavigateTo("/inicio");
+    }
+    private void ConfirmarEliminacion(Persona persona)
+    {
+        _personaParaEliminar = persona;
+        dialogo.Mostrar($"¿Desea eliminar a {persona.Nombre} {persona.Apellido}?");
+    }
+    private void Eliminar()
+    {
+        try {
+        if (_personaParaEliminar != null)
+        {
+            personaBajaUseCase.Ejecutar(_personaParaEliminar.Id,usuarioActual.Id);
+            _lista = ListarPersonaUseCase.Ejecutar();
+        }
+        }
+        catch(Exception e) {
+            error = e.Message;
+            fallo = true;
+        }
+    }
+    void ModificarPersona(Persona per)
+    {
+        Navegador.NavigateTo($"persona/{per.Id}");
+    }
+
+}

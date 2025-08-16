@@ -1,0 +1,32 @@
+@page "/inicio"
+@using CentroEventos.Aplicacion.UseCases.UsuarioUseCases
+@rendermode InteractiveServer 
+@inject NavigationManager Navegador
+@inject UsuarioActual usuarioActual
+@inject UsuarioDevolverUseCase usuarioDevolverUseCase
+@inject ServicioAutorizacion autorizacion
+
+@if (usuarioActual.Id == 0)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <p>Bienvenido, @usuarioDevolverUseCase.Ejecutar(usuarioActual.Id).Nombre</p>
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.PersonaAlta)) {
+    <a href="/persona" class="btn btn-success mb-2 w-100">Agregar Persona</a>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.EventoAlta)) {
+    <a href="/evento" class="btn btn-success mb-2 w-100">Agregar Evento</a>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.ReservaAlta)) {
+    <a href="/reserva" class="btn btn-success mb-2 w-100">Agregar Reserva</a>
+}
+<a href="/listadopersonas" class="btn btn-primary mb-2 w-100">Listar Personas</a>
+<a href="/listadousuarios" class="btn btn-primary mb-2 w-100">Listar Usuarios</a>
+<a href="/listadoeventos" class="btn btn-primary mb-2 w-100">Listar todos los Eventos</a>
+<a href="/listadoeventosfuturos" class="btn btn-primary mb-2 w-100">Listar Eventos futuros con cupo</a>
+<a href="/listadoasistencias" class="btn btn-primary mb-2 w-100">Listar asistencias a un evento pasado</a>
+<a href="/listadoreservas" class="btn btn-primary mb-2 w-100">Listar Reservas</a>
+<a href="/" class="btn btn-secondary w-100">Cerrar sesion</a>
+}

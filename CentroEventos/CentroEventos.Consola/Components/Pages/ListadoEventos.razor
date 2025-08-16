@@ -1,0 +1,108 @@
+@page "/listadoeventos"
+@using CentroEventos.Aplicacion.UseCases.PersonaUseCases
+@rendermode InteractiveServer
+@inject ListarEventoDeportivoUseCase listarEventoDeportivoUseCase
+@inject EventoBajaUseCase eventoBajaUseCase
+@inject PersonaDevolverUseCase personaDevolverUseCase
+@inject UsuarioActual usuarioActual
+@inject ServicioAutorizacion autorizacion
+@inject NavigationManager Navegador
+<button class="btn btn-primary" @onclick="()=>Inicio()">
+        Inicio
+</button>
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+<DialogoConfirmacion @ref="dialogo" OnConfirmado="Eliminar"/>
+<table class="table">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>NOMBRE</th>
+ <th>DESCRIPCION</th>
+ <th>FECHA INICIO</th>
+ <th>DURACION</th>
+ <th>CUPO MAXIMO</th>
+ <th>RESPONSABLE</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var eve in _lista)
+ {
+    var responsable = personaDevolverUseCase.Ejecutar(eve.ResponsableId);
+ <tr>
+ <td>@eve.Id</td>
+ <td>@eve.Nombre</td>
+ <td>@eve.Descripcion</td>
+ <td>@eve.FechaHoraInicio</td>
+ <td>@($"{eve.DuracionHoras} Horas")</td>
+ <td>@($"{eve.CupoMaximo} Cupos")</td>
+ <td>@($"{responsable.Nombre} {responsable.Apellido}")</td>
+ <td>
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.EventoModificacion)) {
+    <button class="btn btn-primary" @onclick="()=>ModificarEvento(eve)">
+        Editar
+    </button>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.EventoBaja)) {
+    <button class="btn btn-danger" @onclick="()=>ConfirmarEliminacion(eve)">
+        Eliminar
+    </button>
+}
+ </td>
+ </tr>
+}
+ </tbody>
+</table>
+
+@code {
+    List<EventoDeportivo> _lista = new List<EventoDeportivo>();
+    DialogoConfirmacion dialogo = null!;
+    EventoDeportivo? _eventoParaEliminar = null;
+    string? error;
+    bool fallo = false;
+    protected override void OnInitialized() {
+        try {
+        _lista = listarEventoDeportivoUseCase.Ejecutar();
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    private void ConfirmarEliminacion(EventoDeportivo evento)
+    {
+        try {
+        _eventoParaEliminar = evento;
+        dialogo.Mostrar($"¿Desea eliminar al evento {evento.Nombre} ?");
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    private void Eliminar()
+    {
+        try {
+        if (_eventoParaEliminar != null)
+        {
+            eventoBajaUseCase.Ejecutar(_eventoParaEliminar.Id,usuarioActual.Id);
+            _lista = listarEventoDeportivoUseCase.Ejecutar();
+        }
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    void ModificarEvento(EventoDeportivo eve)
+    {
+        Navegador.NavigateTo($"evento/{eve.Id}");
+    }
+    private void Inicio() {
+        Navegador.NavigateTo("/inicio");
+    }
+
+}

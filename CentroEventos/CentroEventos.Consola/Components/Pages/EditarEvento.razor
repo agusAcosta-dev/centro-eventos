@@ -1,0 +1,114 @@
+@page "/evento/{Id:int?}"
+@using CentroEventos.Aplicacion.UseCases.EventoUseCases
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject EventoAltaUseCase eventoAltaUseCase
+@inject EventoDevolverUseCase eventoDevolverUseCase
+@inject EventoModificarUseCase eventoModificarUseCase
+@inject PersonaDevolverUseCase personaDevolverUseCase
+@inject UsuarioActual usuarioActual
+
+@if (_esNuevoEvento) {
+    <h3>Agregando un nuevo evento</h3>
+}
+else {
+    <h3>Modificando Evento</h3>
+    }
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+@try {
+<div class="mb-3">
+  <label class="form-label">Nombre</label>
+  <input @bind="_evento.Nombre" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Descripción</label>
+  <input @bind="_evento.Descripcion" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Fecha de Inicio</label>
+  <input @bind="_evento.FechaHoraInicio" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Duración (Horas)</label>
+  <input @bind="_evento.DuracionHoras" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">Cupo Máximo</label>
+  <input @bind="_evento.CupoMaximo" class="form-control" />
+</div>
+<div class="mb-3">
+  <label class="form-label">DNI del Responsable</label>
+  <input @bind="dni" class="form-control" />
+</div>
+<button class="btn btn-primary" @onclick="Aceptar">Aceptar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+}
+catch(Exception e) {
+    error = e.Message;
+    fallo = true;
+}
+@code {
+    private EventoDeportivo _evento = new EventoDeportivo();
+    [Parameter] public int? Id { get; set; }
+    bool _esNuevoEvento = true;
+    bool fallo = false;
+    string? dni;
+    string? error;
+    protected override void OnParametersSet() {
+        try {
+        if(Id != null) {
+            var eve_hallado = eventoDevolverUseCase.Ejecutar(Id.Value);
+            if (eve_hallado != null) {
+                _evento = eve_hallado;
+                dni = personaDevolverUseCase.Ejecutar(_evento.ResponsableId).DNI;
+                _esNuevoEvento = false;
+            }
+        }
+        }
+        catch(EntidadNotFoundException) {
+            error = "No se encontró la persona con el DNI especificado.";
+            fallo = true;
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    void Aceptar()
+    {
+        try {
+            Persona personaAux = personaDevolverUseCase.Ejecutar(dni!);
+            if (_esNuevoEvento)
+            {
+                _evento.ResponsableId = personaAux.Id;
+                eventoAltaUseCase.Ejecutar(_evento,usuarioActual.Id);
+            }
+            else
+            {
+                if(dni != personaDevolverUseCase.Ejecutar(_evento.ResponsableId).DNI) {
+                    _evento.ResponsableId = personaAux.Id;
+                }
+                eventoModificarUseCase.Ejecutar(_evento,usuarioActual.Id);
+            }
+            _evento = new EventoDeportivo();
+            Navegador.NavigateTo("listadoeventos");
+        }
+        catch(EntidadNotFoundException) {
+            error = "No se encontró la persona con el DNI especificado.";
+            fallo = true;
+        }
+        catch(Exception ex) {
+            error = ex.Message;
+            fallo = true;
+        }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/inicio");
+    }
+
+}

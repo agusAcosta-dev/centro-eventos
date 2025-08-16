@@ -1,0 +1,108 @@
+@page "/listadoasistencias"
+@using CentroEventos.Aplicacion.UseCases.EventoUseCases
+@using CentroEventos.Aplicacion.UseCases.PersonaUseCases
+@using CentroEventos.Aplicacion.UseCases.ReservaUseCases
+@rendermode InteractiveServer
+@inject ListarReservaAsistenciasUseCase listarReservaAsistenciasUseCase
+@inject PersonaBajaUseCase personaBajaUseCase
+@inject NavigationManager Navegador
+@inject EventoDevolverUseCase eventoDevolverUseCase
+@inject ServicioAutorizacion autorizacion
+@inject UsuarioActual usuarioActual
+<button class="btn btn-primary" @onclick="()=>Inicio()">
+        Inicio
+</button>
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+<input placeholder="Nombre" @bind="nombreEvento" class="form-control">
+<button class="btn btn-primary" @onclick="Aceptar">Aceptar</button>
+
+<DialogoConfirmacion @ref="dialogo" OnConfirmado="Eliminar"/>
+<table class="table">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>NOMBRE</th>
+ <th>APELLIDO</th>
+ <th>DNI</th>
+ <th>EMAIL</th>
+ <th>TELEFONO</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var per in _lista)
+ {
+ <tr>
+ <td>@per.Id</td>
+ <td>@per.Nombre</td>
+ <td>@per.Apellido</td>
+ <td>@per.DNI</td>
+ <td>@per.Email</td>
+ <td>@per.Telefono</td>
+ <td>
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.PersonaModificacion)) {
+    <button class="btn btn-primary" @onclick="()=>ModificarPersona(per)">
+        Editar
+    </button>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.PersonaBaja)) {
+    <button class="btn btn-danger" @onclick="()=>ConfirmarEliminacion(per)">
+        Eliminar
+    </button>
+}
+ </td>
+ </tr>
+ }
+ </tbody>
+</table>
+
+@code {
+    List<Persona> _lista = new List<Persona>();
+    DialogoConfirmacion dialogo = null!;
+    Persona? _personaParaEliminar = null;
+    string? nombreEvento;
+    string? error;
+    bool fallo = false;
+    EventoDeportivo? evento;
+    void Aceptar() {
+        try {
+            if(String.IsNullOrWhiteSpace(nombreEvento)) throw new ValidacionException("Ingrese un nombre.");
+            evento = eventoDevolverUseCase.Ejecutar(nombreEvento!);
+            _lista = listarReservaAsistenciasUseCase.Ejecutar(evento.Id);
+        }
+        catch(Exception e) {
+            fallo = true;
+            error = e.Message;
+        }
+    }
+    private void ConfirmarEliminacion(Persona persona)
+    {
+        _personaParaEliminar = persona;
+        dialogo.Mostrar($"¿Desea eliminar a {persona.Nombre} {persona.Apellido}?");
+    }
+    private void Eliminar()
+    {
+        try {
+        if (_personaParaEliminar != null)
+        {
+            personaBajaUseCase.Ejecutar(_personaParaEliminar.Id,1);
+            _lista = listarReservaAsistenciasUseCase.Ejecutar(evento!.Id);
+        }
+        }
+        catch(Exception e) {
+            error = e.Message;
+            fallo = true;
+        }
+    }
+    void ModificarPersona(Persona per)
+    {
+        Navegador.NavigateTo($"persona/{per.Id}");
+    }
+    private void Inicio() {
+        Navegador.NavigateTo("/inicio");
+    }
+
+}

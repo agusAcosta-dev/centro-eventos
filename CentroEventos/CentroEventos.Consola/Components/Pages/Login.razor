@@ -1,0 +1,58 @@
+@page "/login"
+@using CentroEventos.Aplicacion.UseCases.UsuarioUseCases
+@rendermode InteractiveServer
+@inject NavigationManager Navegador
+@inject UsuarioAltaUseCase usuarioAltaUseCase
+@inject UsuarioDevolverUseCase usuarioDevolverUseCase
+@inject UsuarioModificarUseCase usuarioModificarUseCase
+@inject UsuarioActual usuarioActual
+@inject Hasher hasher;
+
+<h3>Iniciando sesion</h3>
+
+@if (fallo)
+{
+    <div class="alert alert-danger">@mensajeError</div>
+}
+
+<div class="mb-3">
+  <label class="form-label">Email</label>
+  <input @bind="_usuario.Email" class="form-control" />
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Contraseña</label>
+  <input @bind="rawContrasena" type="password" class="form-control" />
+</div>
+<button class="btn btn-primary" @onclick="Aceptar">Entrar</button>
+<button class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+
+@code {
+    private Usuario _usuario = new Usuario();
+    private string rawContrasena = "";
+    [Parameter] public int? Id { get; set; }
+    private string? mensajeError;
+    private bool fallo = false;
+    void Aceptar()
+    {
+        try{
+        var usuarioHallado = usuarioDevolverUseCase.Ejecutar(_usuario.Email);
+        if(usuarioHallado != null && Hasher.Sha265(rawContrasena) == usuarioHallado.Contrasena) {
+            usuarioActual.Id = usuarioHallado.Id;
+            Navegador.NavigateTo("/inicio");
+        }
+        else {
+            fallo = true;
+            mensajeError = "Datos incorrectos, o el usuario no existe.";
+        }
+        }
+        catch(Exception e) {
+            mensajeError = e.Message;
+            fallo = true;
+        }
+    }
+    private void Cancelar()
+    {
+        Navegador.NavigateTo("/");
+    }
+}

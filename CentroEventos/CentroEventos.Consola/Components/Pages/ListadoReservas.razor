@@ -1,0 +1,103 @@
+@page "/listadoreservas"
+@using CentroEventos.Aplicacion.UseCases.EventoUseCases
+@using CentroEventos.Aplicacion.UseCases.PersonaUseCases
+@using CentroEventos.Aplicacion.UseCases.Reserva.UseCases
+@rendermode InteractiveServer
+@inject ListarReservaUseCase listarReservaUseCase
+@inject ReservaBajaUseCase reservaBajaUseCase
+@inject PersonaDevolverUseCase personaDevolverUseCase
+@inject EventoDevolverUseCase eventoDevolverUseCase
+@inject UsuarioActual usuarioActual
+@inject ServicioAutorizacion autorizacion
+@inject NavigationManager Navegador
+<button class="btn btn-primary" @onclick="()=>Inicio()">
+        Inicio
+</button>
+@if(fallo) {
+    <div class="alert alert-danger">
+        @error
+    </div>
+}
+<DialogoConfirmacion @ref="dialogo" OnConfirmado="Eliminar"/>
+<table class="table">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>CLIENTE</th>
+ <th>EVENTO</th>
+ <th>FECHA DE COMPRA</th>
+ <th>ESTADO</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var res in _lista)
+ {
+    var cliente = personaDevolverUseCase.Ejecutar(res.PersonaId);
+    var evento = eventoDevolverUseCase.Ejecutar(res.EventoDeportivoId);
+ <tr>
+ <td>@res.Id</td>
+ <td>@($"{cliente.Nombre} {cliente.Apellido}")</td>
+ <td>@evento.Nombre</td>
+ <td>@res.FechaAltaReserva</td>
+ <td>@res.EstadoAsistencia.ToString()</td>
+ <td>
+
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.ReservaModificacion)) {
+    <button class="btn btn-primary" @onclick="()=>ModificarReserva(res)">
+        Editar
+    </button>
+}
+@if(autorizacion.PoseeElPermiso(usuarioActual.Id,Permiso.ReservaBaja)) {
+    <button class="btn btn-danger" @onclick="()=>ConfirmarEliminacion(res)">
+        Eliminar
+    </button>
+}
+ </td>
+ </tr>
+ }
+ </tbody>
+</table>
+
+@code {
+    List<Reserva> _lista = new List<Reserva>();
+    DialogoConfirmacion dialogo = null!;
+    Reserva? _reservaParaEliminar = null;
+    bool fallo = false;
+    string? error;
+    protected override void OnInitialized() {
+        try {
+        _lista = listarReservaUseCase.Ejecutar();
+        }
+        catch(Exception e) {
+            error = e.Message;
+            fallo = true;
+        }
+    }
+    private void ConfirmarEliminacion(Reserva reserva)
+    {
+        _reservaParaEliminar = reserva;
+        dialogo.Mostrar("¿Desea eliminar la reserva?");
+    }
+    private void Eliminar()
+    {
+        try {
+        if (_reservaParaEliminar != null)
+        {
+            reservaBajaUseCase.Ejecutar(_reservaParaEliminar.Id,usuarioActual.Id);
+            _lista = listarReservaUseCase.Ejecutar();
+        }
+        }
+        catch(Exception e) {
+            error = e.Message;
+            fallo = true;
+        }
+    }
+    void ModificarReserva(Reserva reserva)
+    {
+        Navegador.NavigateTo($"reserva/{reserva.Id}");
+    }
+    private void Inicio() {
+        Navegador.NavigateTo("/inicio");
+    }
+
+}
